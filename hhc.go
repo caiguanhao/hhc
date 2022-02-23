@@ -53,11 +53,16 @@ const footer = `</BODY></HTML>
 
 // Encode converts a Objects tree to HHC document.
 func Encode(w io.Writer, objects Objects) error {
-	if objects == nil {
+	if len(objects) == 0 {
 		return nil
 	}
 	w.Write([]byte(header))
-	encode(w, objects, 0)
+	if len(objects) == 1 && objects[0].Type == TYPE_TEXT_SITE_PROPERTIES {
+		encodeObject(w, objects[0], 1, 0)
+		encode(w, objects[0].Objects, 0)
+	} else {
+		encode(w, objects, 0)
+	}
 	_, err := w.Write([]byte(footer))
 	return err
 }
@@ -70,24 +75,29 @@ func encode(w io.Writer, objects Objects, lvl int) {
 	w.Write([]byte("<UL>\n"))
 	for _, object := range objects {
 		w.Write(bytes.Repeat([]byte{'\t'}, lvl+1))
-		w.Write([]byte("<LI> <OBJECT type=\""))
-		w.Write([]byte(object.Type))
-		w.Write([]byte("\">\n"))
-		keys := keysOf(object.Params)
-		for i := len(keys) - 1; i > -1; i-- {
-			w.Write(bytes.Repeat([]byte{'\t'}, lvl+2))
-			w.Write([]byte("<param name=\""))
-			w.Write([]byte(html.EscapeString(keys[i])))
-			w.Write([]byte("\" value=\""))
-			w.Write([]byte(html.EscapeString(object.Params[keys[i]])))
-			w.Write([]byte("\">\n"))
-		}
-		w.Write(bytes.Repeat([]byte{'\t'}, lvl+2))
-		w.Write([]byte("</OBJECT>\n"))
+		w.Write([]byte("<LI> "))
+		encodeObject(w, object, lvl+2, lvl+2)
 		encode(w, object.Objects, lvl+1)
 	}
 	w.Write(bytes.Repeat([]byte{'\t'}, lvl))
 	w.Write([]byte("</UL>\n"))
+}
+
+func encodeObject(w io.Writer, object Object, lvl, endLvl int) {
+	w.Write([]byte("<OBJECT type=\""))
+	w.Write([]byte(object.Type))
+	w.Write([]byte("\">\n"))
+	keys := keysOf(object.Params)
+	for i := len(keys) - 1; i > -1; i-- {
+		w.Write(bytes.Repeat([]byte{'\t'}, lvl))
+		w.Write([]byte("<param name=\""))
+		w.Write([]byte(html.EscapeString(keys[i])))
+		w.Write([]byte("\" value=\""))
+		w.Write([]byte(html.EscapeString(object.Params[keys[i]])))
+		w.Write([]byte("\">\n"))
+	}
+	w.Write(bytes.Repeat([]byte{'\t'}, endLvl))
+	w.Write([]byte("</OBJECT>\n"))
 }
 
 func findObjects(objects *Objects, n *html.Node, objectType string) {
