@@ -15,6 +15,7 @@ func TestDecode(t *testing.T) {
 	}
 	var w bytes.Buffer
 	e := json.NewEncoder(&w)
+	e.SetEscapeHTML(false)
 	e.SetIndent("", "  ")
 	err = e.Encode(objects)
 	if err != nil {
@@ -73,7 +74,7 @@ const hhcContent = `<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 				<param name="Local" value="html\HelloWorld.htm">
 				</OBJECT>
 			<LI> <OBJECT type="text/sitemap">
-				<param name="Name" value="Lorem Ipsum">
+				<param name="Name" value="Lorem &amp; Ipsum">
 				<param name="Local" value="html\LoremIpsum.htm">
 				</OBJECT>
 			<UL>
@@ -125,7 +126,7 @@ const jsonContent = `[
             "Type": "text/sitemap",
             "Params": {
               "Local": "html\\LoremIpsum.htm",
-              "Name": "Lorem Ipsum"
+              "Name": "Lorem & Ipsum"
             },
             "Objects": [
               {
