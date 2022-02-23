@@ -28,6 +28,25 @@ func TestDecode(t *testing.T) {
 	}
 }
 
+func TestEncode(t *testing.T) {
+	var objects Objects
+	err := json.NewDecoder(strings.NewReader(jsonContent)).Decode(&objects)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var w bytes.Buffer
+	err = Encode(&w, objects)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual := w.String()
+	if actual == hhcContent {
+		t.Log("encode test passed")
+	} else {
+		t.Error("encode result not match")
+	}
+}
+
 const hhcContent = `<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <HTML>
 <HEAD>

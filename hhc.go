@@ -1,7 +1,9 @@
 package hhc
 
 import (
+	"bytes"
 	"io"
+	"sort"
 
 	"golang.org/x/net/html"
 )
@@ -36,6 +38,56 @@ func Decode(r io.Reader, objectType string) (Objects, error) {
 		return nil, nil
 	}
 	return objects, nil
+}
+
+const header = `<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+`
+
+const footer = `</BODY></HTML>
+`
+
+// Encode converts a Objects tree to HHC document.
+func Encode(w io.Writer, objects Objects) error {
+	if objects == nil {
+		return nil
+	}
+	w.Write([]byte(header))
+	encode(w, objects, 0)
+	_, err := w.Write([]byte(footer))
+	return err
+}
+
+func encode(w io.Writer, objects Objects, lvl int) {
+	if len(objects) == 0 {
+		return
+	}
+	w.Write(bytes.Repeat([]byte{'\t'}, lvl))
+	w.Write([]byte("<UL>\n"))
+	for _, object := range objects {
+		w.Write(bytes.Repeat([]byte{'\t'}, lvl+1))
+		w.Write([]byte("<LI> <OBJECT type=\""))
+		w.Write([]byte(object.Type))
+		w.Write([]byte("\">\n"))
+		keys := keysOf(object.Params)
+		for i := len(keys) - 1; i > -1; i-- {
+			w.Write(bytes.Repeat([]byte{'\t'}, lvl+2))
+			w.Write([]byte("<param name=\""))
+			w.Write([]byte(html.EscapeString(keys[i])))
+			w.Write([]byte("\" value=\""))
+			w.Write([]byte(html.EscapeString(object.Params[keys[i]])))
+			w.Write([]byte("\">\n"))
+		}
+		w.Write(bytes.Repeat([]byte{'\t'}, lvl+2))
+		w.Write([]byte("</OBJECT>\n"))
+		encode(w, object.Objects, lvl+1)
+	}
+	w.Write(bytes.Repeat([]byte{'\t'}, lvl))
+	w.Write([]byte("</UL>\n"))
 }
 
 func findObjects(objects *Objects, n *html.Node, objectType string) {
@@ -91,4 +143,12 @@ func findParam(params *Params, n *html.Node) {
 			(*params)[key] = value
 		}
 	}
+}
+
+func keysOf(params Params) (keys []string) {
+	for key := range params {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return
 }
